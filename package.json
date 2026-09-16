@@ -1,0 +1,31 @@
+{
+  "name": "sim-simma",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "dev:api": "wrangler pages dev dist --port 8787",
+    "build": "vite build",
+    "preview": "npm run build && wrangler pages dev dist",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p worker/tsconfig.json && tsc --noEmit -p functions/tsconfig.json",
+    "deploy": "npm run build && wrangler pages deploy dist --project-name sim-simma",
+    "data": "python pipeline/build_data.py --out build/data",
+    "seed:local": "python pipeline/publish.py --data build/data --local",
+    "sim": "tsx scripts/sim-cli.ts"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260916.1",
+    "@types/node": "^22.0.0",
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "^18.3.7",
+    "@vitejs/plugin-react": "^4.7.0",
+    "tsx": "^4.23.13",
+    "typescript": "^5.9.3",
+    "vite": "^6.0.0",
+    "wrangler": "^4.132.0"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  }
+}

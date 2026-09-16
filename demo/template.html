@@ -1,0 +1,576 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sim Simma, Week __WEEK__ test lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #EDF1EB;
+  --surface: #FFFFFF;
+  --ink: #14241D;
+  --muted: #5A6A62;
+  --line: rgba(20, 36, 29, 0.14);
+  --turf: #2E6B47;
+  --turf-soft: #D8E6DC;
+  --pylon: #F2561D;
+  --pylon-ink: #FFFFFF;
+  --warn: #9A5B00;
+  --body: "Barlow", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0E1813;
+    --surface: #16241D;
+    --ink: #E6EEE8;
+    --muted: #9DB0A6;
+    --line: rgba(230, 238, 232, 0.14);
+    --turf: #5DAA7C;
+    --turf-soft: #1E3529;
+    --pylon: #FF7A3D;
+    --pylon-ink: #1A0C04;
+    --warn: #F0B45A;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0E1813;
+  --surface: #16241D;
+  --ink: #E6EEE8;
+  --muted: #9DB0A6;
+  --line: rgba(230, 238, 232, 0.14);
+  --turf: #5DAA7C;
+  --turf-soft: #1E3529;
+  --pylon: #FF7A3D;
+  --pylon-ink: #1A0C04;
+  --warn: #F0B45A;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: 16px;
+  line-height: 1.45;
+}
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--pylon); outline-offset: 2px; }
+
+.wrap { max-width: 760px; margin: 0 auto; padding: 20px 16px 64px; }
+
+header.top h1 {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: clamp(2rem, 7vw, 2.8rem);
+  line-height: 1;
+  letter-spacing: -0.01em;
+  margin: 0 0 6px;
+}
+.topline { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+.week-tag { font-family: var(--display); font-weight: 600; font-size: 1.3rem; color: var(--turf); }
+header.top p { margin: 0; color: var(--muted); font-size: 0.95rem; max-width: 60ch; }
+
+/* Game picker */
+.games {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 16px 2px 10px;
+  margin: 0 -2px;
+  scroll-snap-type: x proximity;
+}
+.game-chip {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 12px;
+  text-align: left;
+  cursor: pointer;
+  min-width: 108px;
+}
+.game-chip .teams { font-family: var(--display); font-weight: 600; font-size: 1.15rem; line-height: 1.1; }
+.game-chip .when { color: var(--muted); font-size: 0.8rem; }
+.game-chip[aria-pressed="true"] { border-color: var(--turf); box-shadow: inset 0 0 0 1px var(--turf); background: var(--turf-soft); }
+
+/* Matchup panel */
+.matchup { margin-top: 10px; }
+.matchup h2 {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: clamp(1.8rem, 6vw, 2.4rem);
+  line-height: 1.05;
+  margin: 6px 0 8px;
+}
+.facts { display: flex; flex-wrap: wrap; gap: 6px 18px; color: var(--muted); font-size: 0.92rem; margin: 0 0 14px; padding: 0; list-style: none; }
+.facts b { color: var(--ink); font-weight: 600; }
+
+.controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.run {
+  background: var(--pylon);
+  color: var(--pylon-ink);
+  border: 0;
+  border-radius: 8px;
+  padding: 12px 20px;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 1.25rem;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  min-height: 48px;
+}
+.run[disabled] { opacity: 0.6; cursor: progress; }
+.controls label { color: var(--muted); font-size: 0.9rem; display: flex; gap: 6px; align-items: center; }
+.controls select, .controls input[type="checkbox"] { accent-color: var(--turf); }
+.controls select { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
+
+.progress { height: 6px; background: var(--line); border-radius: 3px; margin-top: 12px; overflow: hidden; }
+.progress > span { display: block; height: 100%; width: 0; background: var(--turf); transition: width 0.12s linear; }
+
+/* Results */
+.results { margin-top: 26px; }
+.empty { color: var(--muted); border: 1px dashed var(--line); border-radius: 10px; padding: 18px; }
+
+.scoreboard { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border-top: 2px solid var(--ink); border-bottom: 1px solid var(--line); }
+.score-side { padding: 12px 4px 10px; }
+.score-side + .score-side { text-align: right; border-left: 1px solid var(--line); }
+.score-side .code { font-family: var(--display); font-weight: 600; font-size: 1.1rem; color: var(--muted); }
+.score-side .pts { font-family: var(--display); font-weight: 700; font-size: clamp(3.4rem, 15vw, 5rem); line-height: 0.95; font-variant-numeric: tabular-nums; }
+.score-side .sub { font-size: 0.85rem; color: var(--muted); }
+
+/* Field: the signature element */
+.field-wrap { margin: 18px 0 6px; }
+.field {
+  position: relative;
+  height: 64px;
+  border-radius: 6px;
+  background:
+    repeating-linear-gradient(90deg, transparent 0, transparent calc(10% - 1px), rgba(255,255,255,0.55) calc(10% - 1px), rgba(255,255,255,0.55) 10%),
+    var(--turf);
+  overflow: hidden;
+}
+.field .ez {
+  position: absolute; top: 0; bottom: 0; width: 9%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--display); font-weight: 700; color: #fff; font-size: 1rem;
+  background: rgba(0,0,0,0.28);
+  writing-mode: vertical-rl;
+}
+.field .ez.left { left: 0; transform: rotate(180deg); }
+.field .ez.right { right: 0; }
+.field .mid { position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; background: rgba(255,255,255,0.9); }
+.ball {
+  position: absolute; top: 50%;
+  width: 34px; height: 20px;
+  margin-left: -17px; margin-top: -10px;
+  background: #7A3E1C;
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+  transition: left 0.9s cubic-bezier(.2,.8,.2,1);
+}
+.ball::after { content: ""; position: absolute; left: 10px; right: 10px; top: 9px; height: 2px; background: #fff; }
+@media (prefers-reduced-motion: reduce) { .ball { transition: none; } .progress > span { transition: none; } }
+.field-caption { display: flex; justify-content: space-between; font-size: 0.9rem; margin-top: 6px; }
+.field-caption b { font-family: var(--display); font-size: 1.2rem; }
+
+.defense { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 18px; }
+.def-card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+.def-card h3 { margin: 0 0 6px; font-family: var(--display); font-size: 1.15rem; font-weight: 600; }
+.def-card dl { margin: 0; display: grid; grid-template-columns: 1fr auto; gap: 3px 10px; font-size: 0.92rem; }
+.def-card dt { color: var(--muted); }
+.def-card dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
+
+h3.section { font-family: var(--display); font-weight: 700; font-size: 1.5rem; margin: 30px 0 8px; }
+
+.tabs { display: flex; gap: 6px; margin-bottom: 8px; }
+.tab { border: 1px solid var(--line); background: var(--surface); padding: 6px 16px; border-radius: 999px; cursor: pointer; font-family: var(--display); font-weight: 600; font-size: 1.05rem; }
+.tab[aria-selected="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+.players { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+.prow { border-bottom: 1px solid var(--line); }
+.prow > button {
+  width: 100%; background: none; border: 0; text-align: left; cursor: pointer;
+  display: grid; grid-template-columns: minmax(0, 1fr) 96px 58px; gap: 10px; align-items: center;
+  padding: 10px 2px;
+}
+.pname { display: block; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pmeta { display: block; font-size: 0.8rem; color: var(--muted); }
+.pmeta .flag { color: var(--warn); font-weight: 600; }
+.pnum { text-align: right; }
+.pnum .big { font-family: var(--display); font-weight: 700; font-size: 1.45rem; line-height: 1; font-variant-numeric: tabular-nums; }
+.pnum .unit { font-size: 0.75rem; color: var(--muted); display: block; }
+.range { position: relative; height: 6px; background: var(--line); border-radius: 3px; margin-top: 5px; }
+.range > span { position: absolute; top: 0; bottom: 0; background: var(--turf); border-radius: 3px; }
+.ptd { text-align: right; font-variant-numeric: tabular-nums; }
+.ptd .big { font-family: var(--display); font-weight: 600; font-size: 1.15rem; }
+.ptd .unit { font-size: 0.72rem; color: var(--muted); display: block; }
+.head-row { display: grid; grid-template-columns: minmax(0, 1fr) 96px 58px; gap: 10px; font-size: 0.78rem; color: var(--muted); padding: 0 2px 4px; }
+.head-row span:not(:first-child) { text-align: right; }
+
+.detail { padding: 2px 2px 14px; display: none; }
+.prow.open .detail { display: block; }
+.statgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 4px 14px; font-size: 0.88rem; margin-bottom: 10px; }
+.statgrid div { display: flex; justify-content: space-between; border-bottom: 1px dotted var(--line); padding: 2px 0; }
+.statgrid span:first-child { color: var(--muted); }
+.checker { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; background: var(--turf-soft); border-radius: 8px; padding: 10px; }
+.checker select, .checker input { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
+.checker input { width: 84px; }
+.checker output { font-weight: 600; }
+
+.drives { list-style: none; margin: 0; padding: 0; }
+.drives li { display: grid; grid-template-columns: 64px 1fr auto; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 0.93rem; align-items: baseline; }
+.drives .clock { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 0.85rem; }
+.drives .tm { font-family: var(--display); font-weight: 700; }
+.drives .sc { font-family: var(--display); font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.drives .def { color: var(--pylon); font-weight: 600; }
+
+.notes { margin-top: 28px; font-size: 0.85rem; color: var(--muted); }
+.notes p { margin: 0 0 6px; max-width: 70ch; }
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="topline"><h1>Sim Simma</h1><span class="week-tag">Week __WEEK__</span></div>
+    <p>Pick a game and run it. Each run plays the game thousands of times using real nflverse data from __DATA_DATE__.</p>
+  </header>
+
+  <nav class="games" id="games" aria-label="Games this week"></nav>
+
+  <section class="matchup" id="matchup" aria-live="polite"></section>
+
+  <div class="controls">
+    <button class="run" id="run" type="button">Simulate game</button>
+    <label>Games
+      <select id="iters">
+        <option value="2000">2,000</option>
+        <option value="5000">5,000</option>
+        <option value="10000" selected>10,000</option>
+      </select>
+    </label>
+    <label><input type="checkbox" id="market" checked> Lean on Vegas lines</label>
+  </div>
+  <div class="progress" aria-hidden="true"><span id="bar"></span></div>
+
+  <section class="results" id="results">
+    <p class="empty">Tap Simulate game to see projected scores, player yards, sacks, and defensive TD chances.</p>
+  </section>
+</div>
+
+<script type="application/json" id="game-data">__GAMES_JSON__</script>
+<script>/*__ENGINE__*/</script>
+<script>
+(function () {
+  "use strict";
+  var GAMES = JSON.parse(document.getElementById("game-data").textContent);
+  var NFLSim = window.NFLSim;
+  var state = { gameId: GAMES[0].game_id, result: null, tab: null, running: false };
+
+  var $ = function (id) { return document.getElementById(id); };
+  var esc = function (s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  };
+  var pct = function (v, d) { return (v * 100).toFixed(d == null ? 0 : d) + "%"; };
+  var f1 = function (v) { return (Math.round(v * 10) / 10).toFixed(1); };
+  var game = function () { return GAMES.find(function (g) { return g.game_id === state.gameId; }); };
+
+  var DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  function kickoff(g) {
+    var d = new Date(g.gameday + "T12:00:00");
+    var t = g.gametime || "";
+    if (t) {
+      var parts = t.split(":");
+      var h = +parts[0];
+      t = ((h + 11) % 12 + 1) + ":" + parts[1] + (h >= 12 ? " pm" : " am") + " ET";
+    }
+    return DAYS[d.getDay()] + " " + t;
+  }
+
+  function favoriteText(g) {
+    var s = g.lines.spread_home;
+    if (s == null) return "No line yet";
+    if (s === 0) return "Pick'em";
+    return (s > 0 ? g.home_team : g.away_team) + " by " + Math.abs(s);
+  }
+
+  // ---------- Game picker ----------
+  function renderGames() {
+    $("games").innerHTML = GAMES.map(function (g) {
+      return '<button class="game-chip" type="button" data-id="' + esc(g.game_id) + '" aria-pressed="' + (g.game_id === state.gameId) + '">' +
+        '<div class="teams">' + esc(g.away_team) + " at " + esc(g.home_team) + "</div>" +
+        '<div class="when">' + esc(kickoff(g)) + "</div></button>";
+    }).join("");
+  }
+  $("games").addEventListener("click", function (e) {
+    var btn = e.target.closest(".game-chip");
+    if (!btn || state.running) return;
+    state.gameId = btn.getAttribute("data-id");
+    state.result = null;
+    state.tab = null;
+    renderGames();
+    renderMatchup();
+    renderResults();
+  });
+
+  function renderMatchup() {
+    var g = game();
+    var implied = g.lines.implied_points;
+    $("matchup").innerHTML =
+      "<h2>" + esc(g.away_team) + " at " + esc(g.home_team) + "</h2>" +
+      '<ul class="facts">' +
+      "<li>Kickoff <b>" + esc(kickoff(g)) + "</b></li>" +
+      "<li>Spread <b>" + esc(favoriteText(g)) + "</b></li>" +
+      "<li>Total <b>" + (g.lines.total == null ? "none" : g.lines.total) + "</b></li>" +
+      (implied ? "<li>Vegas implies <b>" + esc(g.away_team) + " " + implied.away + ", " + esc(g.home_team) + " " + implied.home + "</b></li>" : "") +
+      (g.venue.stadium ? "<li>" + esc(g.venue.stadium) + "</li>" : "") +
+      "</ul>";
+  }
+
+  // ---------- Run ----------
+  $("run").addEventListener("click", function () {
+    if (state.running) return;
+    var g = game();
+    var iterations = +$("iters").value;
+    var sim;
+    try {
+      sim = new NFLSim.GameSimulator(g, {
+        iterations: iterations,
+        calibrateToMarket: $("market").checked,
+        seed: (Math.random() * 2147483647) >>> 0,
+      });
+    } catch (err) {
+      $("results").innerHTML = '<p class="empty">This game could not be simulated: ' + esc(err.message) + "</p>";
+      return;
+    }
+    state.running = true;
+    $("run").disabled = true;
+    $("run").textContent = "Simulating";
+    $("bar").style.width = "0%";
+
+    (function step() {
+      sim.runBatch(400);
+      $("bar").style.width = (sim.progress * 100).toFixed(1) + "%";
+      if (!sim.isDone) { setTimeout(step, 0); return; }
+      state.result = sim.finish();
+      state.running = false;
+      $("run").disabled = false;
+      $("run").textContent = "Simulate again";
+      renderResults();
+    })();
+  });
+
+  // ---------- Results ----------
+  var PRIMARY = { QB: "passYds", RB: "rushYds", FB: "rushYds", WR: "recYds", TE: "recYds" };
+  var LABEL = {
+    passYds: "pass yds", passAtt: "attempts", cmp: "completions", passTd: "pass TD", ints: "INT", sacked: "sacked",
+    rushYds: "rush yds", rushAtt: "carries", recYds: "rec yds", rec: "catches", targets: "targets", tds: "total TD",
+  };
+  var CHECK_KEYS = {
+    QB: ["passYds", "cmp", "passAtt", "passTd", "rushYds"],
+    RB: ["rushYds", "rushAtt", "recYds", "rec"],
+    FB: ["rushYds", "recYds"],
+    WR: ["recYds", "rec", "targets", "rushYds"],
+    TE: ["recYds", "rec", "targets"],
+  };
+
+  function playerOrderValue(p) {
+    var s = p.stats;
+    var y = (s.passYds ? s.passYds.mean : 0) + (s.rushYds ? s.rushYds.mean : 0) + (s.recYds ? s.recYds.mean : 0);
+    return (p.pos === "QB" ? 1000 : 0) + y * p.playedPct;
+  }
+
+  function renderResults() {
+    var r = state.result;
+    var g = game();
+    var box = $("results");
+    if (!r || r.gameId !== g.game_id) {
+      box.innerHTML = '<p class="empty">Tap Simulate game to see projected scores, player yards, sacks, and defensive TD chances.</p>';
+      return;
+    }
+    var home = r.teams[r.home];
+    var away = r.teams[r.away];
+    if (!state.tab) state.tab = r.away;
+
+    // Ball position: 0% = away end zone side (left), 100% = home end zone side (right).
+    var homeWin = home.winProb + r.tieProb / 2;
+    var ballLeft = 9 + homeWin * 82;
+    var fav = homeWin >= 0.5 ? home : away;
+    var favProb = homeWin >= 0.5 ? home.winProb : away.winProb;
+
+    var html = "";
+    html += '<div class="scoreboard">' +
+      sideHtml(away, "away") + sideHtml(home, "home") + "</div>";
+
+    html += '<div class="field-wrap">' +
+      '<div class="field" role="img" aria-label="' + esc(fav.team) + " wins " + pct(favProb) + ' of simulations">' +
+      '<div class="ez left">' + esc(away.team) + "</div>" +
+      '<div class="mid"></div>' +
+      '<div class="ez right">' + esc(home.team) + "</div>" +
+      '<div class="ball" id="ball" style="left:50%"></div>' +
+      "</div>" +
+      '<div class="field-caption"><span><b>' + pct(away.winProb) + "</b> " + esc(away.team) + " wins</span>" +
+      (r.tieProb > 0.001 ? "<span>Tie " + pct(r.tieProb, 1) + "</span>" : "") +
+      "<span>" + esc(home.team) + " wins <b>" + pct(home.winProb) + "</b></span></div></div>";
+
+    html += '<div class="defense">' + defHtml(away, home) + defHtml(home, away) + "</div>";
+
+    html += '<h3 class="section">Player projections</h3>';
+    html += '<div class="tabs" role="tablist">' + [r.away, r.home].map(function (t) {
+      return '<button class="tab" role="tab" type="button" data-tab="' + esc(t) + '" aria-selected="' + (state.tab === t) + '">' + esc(t) + "</button>";
+    }).join("") + "</div>";
+    html += '<div class="head-row"><span>Player</span><span>Median yards</span><span>TD</span></div>';
+    html += '<ul class="players" id="players">' + playersHtml(r, state.tab) + "</ul>";
+
+    html += '<h3 class="section">Most typical simulated game</h3>';
+    html += '<p class="pmeta">Final ' + esc(r.away) + " " + r.featured.awayPoints + ", " + esc(r.home) + " " + r.featured.homePoints + ". Scoring plays:</p>";
+    html += '<ul class="drives">' + r.featured.drives.filter(function (d) {
+      return ["Touchdown", "Field goal", "Pick-six", "Fumble return TD", "Safety"].indexOf(d.result) >= 0;
+    }).map(function (d) {
+      var defScore = d.result === "Pick-six" || d.result === "Fumble return TD" || d.result === "Safety";
+      var scorer = defScore ? (d.team === r.home ? r.away : r.home) : d.team;
+      return "<li><span class='clock'>" + esc(d.clockStart) + "</span>" +
+        "<span><span class='tm'>" + esc(scorer) + "</span> " +
+        (defScore ? "<span class='def'>" + esc(d.result) + "</span> " : "") +
+        esc(d.detail || d.result) + "</span>" +
+        "<span class='sc'>" + d.scoreAway + " to " + d.scoreHome + "</span></li>";
+    }).join("") + "</ul>";
+
+    html += '<div class="notes">' +
+      "<p>Ran " + r.iterations.toLocaleString() + " games in " + (r.elapsedMs / 1000).toFixed(1) + " seconds. Player numbers count only games the player suited up for.</p>" +
+      r.notes.map(function (n) { return "<p>" + esc(n) + "</p>"; }).join("") +
+      "<p>Best-guess model built on historical play-by-play, depth charts, and injury reports. Not betting advice.</p>" +
+      "</div>";
+
+    box.innerHTML = html;
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () { var b = $("ball"); if (b) b.style.left = ballLeft + "%"; });
+    });
+  }
+
+  function sideHtml(t, side) {
+    return '<div class="score-side">' +
+      '<div class="code">' + esc(t.team) + (side === "home" ? " (home)" : "") + "</div>" +
+      '<div class="pts">' + f1(t.points.mean) + "</div>" +
+      '<div class="sub">Middle half of games: ' + t.points.p25 + " to " + t.points.p75 + "</div></div>";
+  }
+
+  function defHtml(t, opp) {
+    return '<div class="def-card"><h3>' + esc(t.team) + " defense</h3><dl>" +
+      "<dt>Sacks</dt><dd>" + f1(t.sacks.mean) + "</dd>" +
+      "<dt>3 or more sacks</dt><dd>" + pct(t.sacks3PlusProb) + "</dd>" +
+      "<dt>Scores a TD</dt><dd>" + pct(t.defTdProb, 1) + "</dd>" +
+      "<dt>Takeaways forced</dt><dd>" + f1(opp.turnovers.mean) + "</dd>" +
+      "</dl></div>";
+  }
+
+  function playersHtml(r, team) {
+    var list = r.players.filter(function (p) { return p.team === team && p.playedPct > 0; });
+    list = list.filter(function (p) {
+      var k = PRIMARY[p.pos];
+      var s = p.stats[k];
+      var other = p.pos === "RB" ? p.stats.recYds : p.stats.rushYds;
+      return (s && s.mean >= 3) || (other && other.mean >= 8);
+    });
+    list.sort(function (a, b) { return playerOrderValue(b) - playerOrderValue(a); });
+    var maxY = 1;
+    list.forEach(function (p) { var s = p.stats[PRIMARY[p.pos]]; if (s) maxY = Math.max(maxY, s.p75); });
+
+    return list.map(function (p) {
+      var key = PRIMARY[p.pos];
+      var s = p.stats[key] || { median: 0, p25: 0, p75: 0 };
+      var lo = Math.max(0, s.p25) / maxY * 100;
+      var hi = Math.max(0, s.p75) / maxY * 100;
+      var flags = [];
+      if (p.playedPct < 0.995) flags.push((p.pos === "QB" ? "starts " : "plays ") + pct(p.playedPct));
+      var meta = p.pos + p.depthRank + (p.statusNote ? ' <span class="flag">' + esc(p.statusNote) + "</span>" : "") +
+        (flags.length ? " <span class='flag'>" + esc(flags.join(", ")) + "</span>" : "");
+      return '<li class="prow" data-id="' + esc(p.id) + '">' +
+        '<button type="button" aria-expanded="false">' +
+        '<span><span class="pname">' + esc(p.name) + '</span><span class="pmeta">' + meta + "</span></span>" +
+        '<span class="pnum"><span class="big">' + s.median + '</span><span class="unit">' + LABEL[key] + '</span>' +
+        '<span class="range" title="Middle half: ' + s.p25 + " to " + s.p75 + '"><span style="left:' + lo + "%;width:" + Math.max(2, hi - lo) + '%"></span></span></span>' +
+        (p.pos === "QB" && p.stats.passTd
+          ? '<span class="ptd"><span class="big">' + f1(p.stats.passTd.mean) + '</span><span class="unit">pass TD</span></span>'
+          : '<span class="ptd"><span class="big">' + pct(p.anyTdProb) + '</span><span class="unit">any TD</span></span>') +
+        "</button>" +
+        '<div class="detail">' + detailHtml(p) + "</div></li>";
+    }).join("");
+  }
+
+  function detailHtml(p) {
+    var keys = Object.keys(p.stats);
+    var grid = keys.map(function (k) {
+      return "<div><span>" + LABEL[k] + "</span><span>" + f1(p.stats[k].mean) + "</span></div>";
+    }).join("");
+    var opts = (CHECK_KEYS[p.pos] || []).filter(function (k) { return p.stats[k]; });
+    var first = opts[0];
+    var line = first ? Math.floor(p.stats[first].median) + 0.5 : 0.5;
+    return '<div class="statgrid">' + grid + "</div>" +
+      (opts.length ? '<div class="checker">' +
+        '<label>Line check <select data-role="stat">' + opts.map(function (k) {
+          return '<option value="' + k + '">' + LABEL[k] + "</option>";
+        }).join("") + "</select></label>" +
+        '<input type="number" inputmode="decimal" step="0.5" data-role="line" value="' + line + '" aria-label="Line">' +
+        '<output data-role="out"></output></div>' : "");
+  }
+
+  function updateChecker(row) {
+    var r = state.result;
+    if (!r || !r.distributions) return;
+    var id = row.getAttribute("data-id");
+    var stat = row.querySelector('[data-role="stat"]');
+    var line = row.querySelector('[data-role="line"]');
+    var out = row.querySelector('[data-role="out"]');
+    if (!stat || !line || !out) return;
+    var dist = r.distributions.players[id][stat.value];
+    var played = r.distributions.played[id];
+    var v = parseFloat(line.value);
+    if (isNaN(v)) { out.textContent = "Enter a line"; return; }
+    var over = NFLSim.probOver(dist, v, played);
+    out.textContent = "Over " + pct(over, 1) + ", under " + pct(1 - over, 1);
+  }
+
+  $("results").addEventListener("click", function (e) {
+    var tab = e.target.closest(".tab");
+    if (tab) {
+      state.tab = tab.getAttribute("data-tab");
+      document.querySelectorAll(".tab").forEach(function (t) { t.setAttribute("aria-selected", String(t === tab)); });
+      $("players").innerHTML = playersHtml(state.result, state.tab);
+      return;
+    }
+    var btn = e.target.closest(".prow > button");
+    if (btn) {
+      var row = btn.parentElement;
+      var open = row.classList.toggle("open");
+      btn.setAttribute("aria-expanded", String(open));
+      if (open) updateChecker(row);
+    }
+  });
+  $("results").addEventListener("input", function (e) {
+    var row = e.target.closest(".prow");
+    if (!row) return;
+    var sel = e.target.getAttribute("data-role");
+    if (sel === "stat") {
+      var p = state.result.players.find(function (x) { return x.id === row.getAttribute("data-id"); });
+      var s = p && p.stats[e.target.value];
+      if (s) row.querySelector('[data-role="line"]').value = Math.floor(s.median) + 0.5;
+    }
+    updateChecker(row);
+  });
+
+  renderGames();
+  renderMatchup();
+})();
+</script>
+</body>
+</html>

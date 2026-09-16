@@ -1,0 +1,24 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "sim-simma",
+  "compatibility_date": "2026-09-01",
+  "pages_build_output_dir": "dist",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "sim-simma-db",
+      "database_id": "0f446734-f19c-4cb1-afc5-c185f3ce4048",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "DATA",
+      "id": "8fd908a43632415783b977873abd7925"
+    }
+  ],
+  "vars": {
+    "DATA_VERSION": "v1"
+  },
+  "observability": { "enabled": true }
+}
