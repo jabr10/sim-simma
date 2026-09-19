@@ -14,6 +14,7 @@ export interface WeekGame {
   game_id: string;
   gameday: string;
   gametime: string | null;
+  played?: boolean;
   away_team: string;
   home_team: string;
   spread_home: number | null;

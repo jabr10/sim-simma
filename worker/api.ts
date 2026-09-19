@@ -1,6 +1,8 @@
 // Shared Sim Simma API logic for Workers and Pages Functions.
 // Serves pipeline data from Workers KV and D1.
 
+import { GAME_UNAVAILABLE, isUpcomingGame } from "../src/lib/upcoming";
+
 export interface Env {
   DB: D1Database;
   DATA: KVNamespace;
@@ -94,9 +96,13 @@ async function route(
     if (season === null || week === null || week < 1 || week > 23) {
       return json({ error: "Season and week must be numbers, like /api/weeks/2026/2." }, 400);
     }
-    return cached(request, ctx, CACHE_SECONDS.week, () =>
-      kvJson(env, `${prefix}/weeks/${season}/${week}.json`, `No games published for ${season} week ${week}.`),
-    );
+    return cached(request, ctx, CACHE_SECONDS.week, async () => {
+      const raw = await env.DATA.get(`${prefix}/weeks/${season}/${week}.json`);
+      if (raw == null) return json({ error: `No games published for ${season} week ${week}.` }, 404);
+      const idx = JSON.parse(raw) as { games?: KickoffRow[] } & Record<string, unknown>;
+      const games = (idx.games ?? []).filter((g) => isUpcomingGame(g));
+      return json({ ...idx, games });
+    });
   }
 
   // GET /api/games/:gameId
@@ -107,7 +113,8 @@ async function route(
     return cached(request, ctx, CACHE_SECONDS.game, async () => {
       const raw = await env.DATA.get(`${prefix}/games/${gameId}.json`);
       if (raw == null) return json({ error: `Game ${gameId} has not been published.` }, 404);
-      const game = JSON.parse(raw) as Record<string, unknown>;
+      const game = JSON.parse(raw) as KickoffRow & Record<string, unknown>;
+      if (!isUpcomingGame(game)) return json({ error: GAME_UNAVAILABLE }, 410);
 
       const [season, week, away, home] = gameId.split("_");
       const adjustments = await loadAdjustments(env, Number(season), Number(week), [away, home]);
@@ -191,6 +198,12 @@ function corsHeaders(): Record<string, string> {
     "access-control-allow-origin": "*",
     "access-control-allow-methods": "GET, HEAD, OPTIONS",
   };
+}
+
+interface KickoffRow {
+  gameday?: string | null;
+  gametime?: string | null;
+  played?: boolean;
 }
 
 function toInt(v: string | null | undefined): number | null {

@@ -213,6 +213,7 @@ header.top > p { margin: 8px 0 0; color: var(--muted); font-size: 0.95rem; max-w
 /* Results */
 .results { margin-top: 26px; }
 .empty { color: var(--muted); border: 1px dashed var(--line); border-radius: 10px; padding: 18px; }
+.games-empty { margin: 16px 0 8px; }
 
 .scoreboard { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border-top: 2px solid var(--ink); border-bottom: 1px solid var(--line); }
 .score-side { padding: 12px 4px 10px; }

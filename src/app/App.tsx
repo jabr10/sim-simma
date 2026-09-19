@@ -3,6 +3,7 @@ import { runSimulation } from "../sim/client";
 import type { SimResult } from "../sim/engine";
 import { api, overridesFrom } from "./api";
 import type { GameWithAdjustments, Meta, WeekIndex } from "./api";
+import { GAME_UNAVAILABLE, isUpcomingGame, upcomingGames } from "../lib/upcoming";
 import GamePicker from "./components/GamePicker";
 import Matchup from "./components/Matchup";
 import Results from "./components/Results";
@@ -26,12 +27,13 @@ export default function App() {
   const [weeks, setWeeks] = useState<number[]>([]);
   const [week, setWeek] = useState<number | null>(null);
   const [index, setIndex] = useState<WeekIndex | null>(null);
-  const [gameId, setGameId] = useState<string | null>(initial.current?.id ?? null);
+  const [gameId, setGameId] = useState<string | null>(null);
   const [game, setGame] = useState<GameWithAdjustments | null>(null);
   const [result, setResult] = useState<SimResult | null>(null);
   const [progress, setProgress] = useState(0);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [unavailable, setUnavailable] = useState<string | null>(null);
   const [iterations, setIterations] = useState(10000);
   const [market, setMarket] = useState(true);
   const [reloadKey, setReloadKey] = useState(0);
@@ -61,7 +63,7 @@ export default function App() {
     return () => ac.abort();
   }, [reloadKey]);
 
-  // 2. Week index
+  // 2. Week index — only keep games that have not kicked off yet
   useEffect(() => {
     if (!meta || week === null) return;
     const ac = new AbortController();
@@ -69,10 +71,20 @@ export default function App() {
     api
       .week(meta.season, week, ac.signal)
       .then((idx) => {
-        setIndex(idx);
-        setGameId((current) =>
-          current && idx.games.some((g) => g.game_id === current) ? current : idx.games[0]?.game_id ?? null,
-        );
+        const games = upcomingGames(idx.games);
+        setIndex({ ...idx, games });
+        const requested = initial.current;
+        const requestedId =
+          requested && requested.season === meta.season && requested.week === week ? requested.id : null;
+        if (requested && requested.week === week) initial.current = null;
+        if (requestedId && !games.some((g) => g.game_id === requestedId)) {
+          setUnavailable(GAME_UNAVAILABLE);
+        }
+        setGameId((current) => {
+          const want = current && games.some((g) => g.game_id === current) ? current : requestedId;
+          if (want && games.some((g) => g.game_id === want)) return want;
+          return games[0]?.game_id ?? null;
+        });
       })
       .catch((err) => {
         if (!isAbort(err)) setError(err instanceof Error ? err.message : String(err));
@@ -82,7 +94,17 @@ export default function App() {
 
   // 3. Selected game
   useEffect(() => {
-    if (!gameId) return;
+    if (!gameId) {
+      setGame(null);
+      setResult(null);
+      setProgress(0);
+      const url = new URL(window.location.href);
+      if (url.searchParams.has("game")) {
+        url.searchParams.delete("game");
+        window.history.replaceState(null, "", url);
+      }
+      return;
+    }
     const ac = new AbortController();
     simAbort.current?.abort();
     setGame(null);
@@ -90,9 +112,25 @@ export default function App() {
     setProgress(0);
     api
       .game(gameId, ac.signal)
-      .then(setGame)
+      .then((g) => {
+        if (!isUpcomingGame(g)) {
+          setUnavailable(GAME_UNAVAILABLE);
+          setGame(null);
+          setGameId(null);
+          return;
+        }
+        setGame(g);
+      })
       .catch((err) => {
-        if (!isAbort(err)) setError(err instanceof Error ? err.message : String(err));
+        if (isAbort(err)) return;
+        const message = err instanceof Error ? err.message : String(err);
+        if (message === GAME_UNAVAILABLE) {
+          setUnavailable(GAME_UNAVAILABLE);
+          setGame(null);
+          setGameId(null);
+          return;
+        }
+        setError(message);
       });
 
     const url = new URL(window.location.href);
@@ -105,6 +143,13 @@ export default function App() {
 
   const simulate = useCallback(async () => {
     if (!game || running) return;
+    if (!isUpcomingGame(game)) {
+      setUnavailable(GAME_UNAVAILABLE);
+      setGame(null);
+      setResult(null);
+      setGameId(null);
+      return;
+    }
     simAbort.current?.abort();
     const ac = new AbortController();
     simAbort.current = ac;
@@ -133,6 +178,7 @@ export default function App() {
     setResult(null);
     setProgress(0);
     setError(null);
+    setUnavailable(null);
     initial.current = null;
     const homeWeek = meta?.week ?? week;
     if (homeWeek !== null && homeWeek !== undefined) setWeek(homeWeek);
@@ -149,10 +195,17 @@ export default function App() {
     setResult(null);
     setProgress(0);
     setError(null);
+    setUnavailable(null);
     setReloadKey((k) => k + 1);
   }, []);
 
+  const selectGame = useCallback((id: string) => {
+    setUnavailable(null);
+    setGameId(id);
+  }, []);
+
   const noData = error !== null && meta === null;
+  const canSim = game !== null && isUpcomingGame(game);
 
   return (
     <div className="wrap">
@@ -212,14 +265,21 @@ export default function App() {
         </div>
       )}
 
-      {meta && !index && !error && <p className="skeleton">Loading games</p>}
-      {index && (
-        <GamePicker games={index.games} selectedId={gameId} disabled={running} onSelect={setGameId} />
+      {unavailable && (
+        <div className="banner" role="status">
+          <p>{unavailable}</p>
+          <button type="button" onClick={() => setUnavailable(null)}>
+            Dismiss
+          </button>
+        </div>
       )}
 
-      {game ? <Matchup game={game} /> : index && <p className="skeleton">Loading matchup</p>}
+      {meta && !index && !error && <p className="skeleton">Loading games</p>}
+      {index && <GamePicker games={index.games} selectedId={gameId} disabled={running} onSelect={selectGame} />}
 
-      {game && (
+      {game && canSim ? <Matchup game={game} /> : gameId && index ? <p className="skeleton">Loading matchup</p> : null}
+
+      {game && canSim && (
         <>
           <div className="controls run-row">
             <button className="run" type="button" onClick={simulate} disabled={running}>
@@ -253,10 +313,11 @@ export default function App() {
         </div>
       )}
 
-      {result && game && result.gameId === game.game_id ? (
+      {result && game && canSim && result.gameId === game.game_id ? (
         <Results result={result} />
       ) : (
-        game && (
+        game &&
+        canSim && (
           <section className="results">
             <p className="empty">
               Tap Simulate game to see projected scores, player yards, sacks, and defensive TD chances.
