@@ -76,7 +76,7 @@ export default function App() {
         const requested = initial.current;
         const requestedId =
           requested && requested.season === meta.season && requested.week === week ? requested.id : null;
-        if (requested && requested.week === week) initial.current = null;
+        if (requested && requested.season === meta.season && requested.week === week) initial.current = null;
         if (requestedId && !games.some((g) => g.game_id === requestedId)) {
           setUnavailable(GAME_UNAVAILABLE);
         }
