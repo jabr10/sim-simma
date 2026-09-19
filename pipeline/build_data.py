@@ -727,6 +727,7 @@ def main() -> None:
         write_json(out / "games" / f"{g['game_id']}.json", game_doc)
         week_index.append({
             "game_id": g["game_id"], "gameday": g["gameday"], "gametime": g["gametime"],
+            "played": g["result"] is not None,
             "away_team": g["away_team"], "home_team": g["home_team"],
             "spread_home": spread, "total": total, "roof": g["roof"], "r2_key": key,
         })

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { WeekGame } from "../api";
 import { kickoff } from "../format";
+import { upcomingGames } from "../../lib/upcoming";
 import { expectedWeather, type WeatherSummary } from "../weather";
 
 interface Props {
@@ -12,13 +13,15 @@ interface Props {
 
 export default function GamePicker({ games, selectedId, disabled, onSelect }: Props) {
   const [weather, setWeather] = useState<Record<string, WeatherSummary>>({});
+  const visible = upcomingGames(games);
 
   useEffect(() => {
+    const upcoming = upcomingGames(games);
     const ac = new AbortController();
     let cancelled = false;
     (async () => {
       const entries = await Promise.all(
-        games.map(async (g) => {
+        upcoming.map(async (g) => {
           const home = g.home_team;
           const summary = await expectedWeather({
             gameId: g.game_id,
@@ -38,9 +41,15 @@ export default function GamePicker({ games, selectedId, disabled, onSelect }: Pr
     };
   }, [games]);
 
+  if (visible.length === 0) {
+    return (
+      <p className="empty games-empty">No upcoming games this week. Every kickoff has already passed.</p>
+    );
+  }
+
   return (
     <nav className="games" aria-label="Games this week">
-      {games.map((g) => {
+      {visible.map((g) => {
         const w = weather[g.game_id];
         return (
           <button

@@ -9,5 +9,5 @@
     "noEmit": true,
     "skipLibCheck": true
   },
-  "include": ["./**/*.ts", "../worker/api.ts"]
+  "include": ["./**/*.ts", "../worker/api.ts", "../src/lib/upcoming.ts"]
 }
