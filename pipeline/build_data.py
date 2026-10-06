@@ -113,7 +113,9 @@ def build_plays(pbp: pl.DataFrame, season: int, prior_w: float) -> pl.DataFrame:
         ((pl.col("return_touchdown").fill_null(0) == 1) & (pl.col("td_team") == pl.col("defteam"))).alias("is_def_td"),
         (
             pl.col("wp").is_between(C.NEUTRAL_WP_LOW, C.NEUTRAL_WP_HIGH)
-            & pl.col("down").is_in([1, 2])
+            # nflverse stores down as Float64. Polars 2 is_in() rejects a
+            # lossy Float64-vs-Int64 check, which is what broke the scheduled build.
+            & pl.col("down").cast(pl.Int64, strict=False).is_in([1, 2])
         ).fill_null(False).alias("is_neutral"),
         pl.col("yards_gained").fill_null(0.0).alias("yds"),
     )
